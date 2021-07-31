@@ -1,0 +1,95 @@
+---
+title: "ADS502 - Group Assignment - Fetal Classification"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### R Libraries
+```{r libraries}
+library(reshape2)
+library(ggplot2)
+library(C50)
+library(dplyr)
+library(randomForest)
+library(nnet)
+library(NeuralNetTools)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(tidyverse)
+```
+
+## Exploratory Data Analysis
+
+In this section, we will explore our data and develop an understanding of the information available to us. Our overall goal is to determine which records in the set may be prone to higher chances of mortality. 
+
+### Read data
+```{r dataframes}
+## Read full data set
+fetal_df <- read.csv(file = '/Volumes/GoogleDrive/My Drive/Masters of Applied Data Sciences/2021 - 2 - Summer/ADS502 - Data Mining/Group Project/fetal_health.csv')
+```
+
+
+### Data Summary, Missing Values and Outliers
+
+As we see below, there are no missing values in this dataset. 
+
+```{r datasummary}
+## Count of missing values for each column.
+sapply(fetal_df, function(x) sum(is.na(x)))
+```
+
+### Histograms
+```{r}
+hist(fetal_df$baseline.value, 
+     main="Histogram for baseline.value", 
+     xlab="baseline.value", 
+     border="black", 
+     col="wheat",
+     xlim=c(90,200),
+     las=1, 
+     breaks=5)
+```
+
+
+
+
+### Boxplots
+```{r distboxplots}
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), accelerations)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("Accelerations Boxplot") +
+    xlab("observation no.")
+```
+
+
+
+
+
+
+
+
+### For Modelling Phase; create training and test sets (do this after normalizing data if needed in EDA)
+```{r traintest}
+## Create train and test sets; to be used later for modelling
+## set the seed to make your partition reproducible
+set.seed(7)
+sample_size = round(nrow(fetal_df)*.80)
+index <- sample(seq_len(nrow(fetal_df)), size = sample_size)
+ 
+fetal_train <- fetal_df[index, ]
+fetal_test <- fetal_df[-index, ]
+
+```
+
