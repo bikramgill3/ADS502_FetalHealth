@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ### R Libraries
 ```{r libraries}
 library(reshape2)
+library(corrplot)
 library(ggplot2)
 library(C50)
 library(dplyr)
@@ -20,6 +21,7 @@ library(rpart)
 library(rpart.plot)
 library(caret)
 library(tidyverse)
+options(scipen=999)
 ```
 
 ## Exploratory Data Analysis
@@ -28,50 +30,129 @@ In this section, we will explore our data and develop an understanding of the in
 
 ### Read data
 ```{r dataframes}
-## Read full data set
-fetal_df <- read.csv(file = '/Volumes/GoogleDrive/My Drive/Masters of Applied Data Sciences/2021 - 2 - Summer/ADS502 - Data Mining/Group Project/fetal_health.csv')
+fetal_df <- read.csv(file = '/Users/bikramgill/Desktop/fetal_health.csv')
 ```
 
 
-### Data Summary, Missing Values and Outliers
 
-As we see below, there are no missing values in this dataset. 
+
+
+### Missing Values
+
+As we see below, there are no missing values in this dataset. Thus, no action will be taken in this regard.
 
 ```{r datasummary}
 ## Count of missing values for each column.
 sapply(fetal_df, function(x) sum(is.na(x)))
 ```
 
-### Histograms
-```{r}
-hist(fetal_df$baseline.value, 
-     main="Histogram for baseline.value", 
-     xlab="baseline.value", 
-     border="black", 
-     col="wheat",
-     xlim=c(90,200),
-     las=1, 
-     breaks=5)
+### Correlation Analysis
+
+Correlations will be used to reduce the feature set down initially to those that have more of a relation to fetal_health, our target variable. 
+
+Further EDA will be conducted on the remaining feature set. 
+
+We see from the first visual below that there are no features that have a strong correlation to fetal_health; with the highest correlation being *prolonged_decelerations* (0.48). 
+Based on the correlations of this dataset; if a minimum correlation of abs(0.20) were used; there would be 10 major features of interest. These have been listed in order of absolute correlation below. 
+
+prolongued_decelerations - 0.485
+
+abnormal_short_term_variability - 0.471
+
+percentage_of_time_with_abnormal_long_term_variability - 0.426
+
+accelerations - 0.364
+
+histogram_mode - 0.250
+
+histogram_mean - 0.227
+
+mean_value_of_long_term_variability - 0.227
+
+histogram_variance - 0.207
+
+histogram_median - 0.205
+
+uterine_contractions - 0.204
+
+Of these 10 features, the second visual will be used to ensure that the features are not highly correlated to one another, so as to avoid weighting the model to a particular direction. If variables are found to be highly correlated to each other, the variable with the higher correlation to fetal_health will be retained and the other removed.
+
+histogram_mode is highly correlated to histogram_mean and histogram_median. The latter two features will be removed. 
+
+All other features will be retained. 
+
+Hence, the dataframe has been reduced to 8 features at this stage, which will be analyzed further; (prolongued_decelerations, abnormal_short_term_variability, percentage_of_time_with_abnormal_long_term_variability, accelerations, histogram_mode, mean_value_of_long_term_variability, histogram_variance, uterine_contractions)
+
+
+```{r correlations}
+
+options(repr.plot.width = 25, repr.plot.height = 25)
+fetal_health_corr <- cor(x = fetal_df$fetal_health,y = fetal_df[1:21])
+corrplot::corrplot(fetal_health_corr, tl.cex=0.5, method = "number")
+
+options(repr.plot.width = 25, repr.plot.height = 25)
+fetal_corr <- cor(fetal_df)
+corrplot::corrplot(fetal_corr, tl.cex=0.4)
+
+fetal_df <- fetal_df[, c('prolongued_decelerations', 'abnormal_short_term_variability', 'percentage_of_time_with_abnormal_long_term_variability', 'accelerations', 'histogram_mode', 'mean_value_of_long_term_variability', 'histogram_variance', 'uterine_contractions')]
+
 ```
 
 
 
 
-### Boxplots
-```{r distboxplots}
 
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), accelerations)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("Accelerations Boxplot") +
-    xlab("observation no.")
+
+
+
+### Removal of Outliers
+
+The following function has been defined and used to remove outliers from columns **columns** based on the analyses from section **Distributions and Outlier Analysis**. 
+
+Outliers have been defined as following:
+
+First Quartile = Q1
+Third Quartile = Q3
+Interquartile Range = IQR
+
+Outliers are any points < (Q1 - (1.5 * IQR)) or points > (Q3 + (1.5 * IQR))
+
+
+```{r removeoutliers}
+outliers <- function(x) {
+
+  Q1 <- quantile(x, probs=.25)
+  Q3 <- quantile(x, probs=.75)
+  iqr = Q3-Q1
+
+ upper_limit = Q3 + (iqr*1.5)
+ lower_limit = Q1 - (iqr*1.5)
+
+ x > upper_limit | x < lower_limit
+}
+
+remove_outliers <- function(df, cols = names(df)) {
+  for (col in cols) {
+    df <- df[!outliers(df[[col]]),]
+  }
+  df
+}
+
+
+fetal_df2 <- remove_outliers(fetal_df, c('accelerations', 'baseline.value'))
 ```
+
+
+
+### Distributions and Outlier Analysis
+
+In this section, boxplots and histograms of the columns in this dataset will be explored for a visual representation of any outliers or interesting distributions within the data. 
+
+Following this, for columns where outliers are present, a decision will be made as to whether to remove them, keep them or normalize them. 
+
+This analysis may also be used to remove features that add too much noise to the model or do not contribute anything meaningful. 
+
+
 
 
 
@@ -93,3 +174,497 @@ fetal_test <- fetal_df[-index, ]
 
 ```
 
+
+
+## Appendix
+
+### Appendix 1: Boxplots and Histograms for each Feature
+
+#### baseline.value
+
+```{r bvplots}
+
+hist(fetal_df$baseline.value, 
+     main="Histogram for baseline.value", 
+     xlab="baseline.value", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), baseline.value)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("baseline.value boxplot") +
+    xlab("observation no.")
+```
+
+
+
+#### accelerations
+
+```{r accelplots}
+hist(fetal_df$accelerations, 
+     main="Histogram for accelerations", 
+     xlab="accelerations", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), accelerations)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("accelerations boxplot") +
+    xlab("observation no.")
+```
+
+#### fetal_movement
+
+```{r fetalmvplots}
+hist(fetal_df$fetal_movement, 
+     main="Histogram for fetal_movement", 
+     xlab="fetal_movement", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), fetal_movement)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("fetal_movement boxplot") +
+    xlab("observation no.")
+```
+
+#### uterine_contractions
+
+```{r utcontrplots}
+hist(fetal_df$uterine_contractions, 
+     main="Histogram for uterine_contractions", 
+     xlab="uterine_contractions", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), uterine_contractions)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("uterine_contractions boxplot") +
+    xlab("observation no.")
+```
+
+#### light_decelerations
+
+```{r ltdecelplots}
+hist(fetal_df$light_decelerations, 
+     main="Histogram for light_decelerations", 
+     xlab="light_decelerations", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), light_decelerations)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("light_decelerations boxplot") +
+    xlab("observation no.")
+```
+
+#### severe_decelerations
+
+```{r svrdecelplots}
+hist(fetal_df$severe_decelerations, 
+     main="Histogram for severe_decelerations", 
+     xlab="severe_decelerations", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), severe_decelerations)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("severe_decelerations boxplot") +
+    xlab("observation no.")
+```
+
+#### prolongued_decelerations
+
+```{r prldecelplots}
+hist(fetal_df$prolongued_decelerations, 
+     main="Histogram for prolongued_decelerations", 
+     xlab="prolongued_decelerations", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), prolongued_decelerations)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("prolongued_decelerations boxplot") +
+    xlab("observation no.")
+```
+
+#### abnormal_short_term_variability
+
+```{r abnvarplots}
+hist(fetal_df$abnormal_short_term_variability, 
+     main="Histogram for abnormal_short_term_variability", 
+     xlab="abnormal_short_term_variability", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), abnormal_short_term_variability)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("abnormal_short_term_variability boxplot") +
+    xlab("observation no.")
+```
+
+#### mean_value_of_short_term_variability
+
+
+```{r mnvarplots}
+hist(fetal_df$mean_value_of_short_term_variability, 
+     main="Histogram for mean_value_of_short_term_variability", 
+     xlab="mean_value_of_short_term_variability", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), mean_value_of_short_term_variability)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("mean_value_of_short_term_variability boxplot") +
+    xlab("observation no.")
+```
+
+#### percentage_of_time_with_abnormal_long_term_variability
+
+```{r pctabvarplots}
+hist(fetal_df$percentage_of_time_with_abnormal_long_term_variability, 
+     main="Histogram for percentage_of_time_with_abnormal_long_term_variability", 
+     xlab="percentage_of_time_with_abnormal_long_term_variability", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), percentage_of_time_with_abnormal_long_term_variability)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("percentage_of_time_with_abnormal_long_term_variability boxplot") +
+    xlab("observation no.")
+```
+
+#### mean_value_of_long_term_variability
+
+```{r mnlgvarplots}
+hist(fetal_df$mean_value_of_long_term_variability, 
+     main="Histogram for mean_value_of_long_term_variability", 
+     xlab="mean_value_of_long_term_variability", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), mean_value_of_long_term_variability)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("mean_value_of_long_term_variability boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_width
+
+```{r hstwdplots}
+hist(fetal_df$histogram_width, 
+     main="Histogram for histogram_width", 
+     xlab="histogram_width", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_width)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_width boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_min
+
+```{r hstminplots}
+hist(fetal_df$histogram_min, 
+     main="Histogram for histogram_min", 
+     xlab="histogram_min", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_min)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_min boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_max
+
+```{r hsmaxplots}
+hist(fetal_df$histogram_max, 
+     main="Histogram for histogram_max", 
+     xlab="histogram_max", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_max)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_max boxplot") +
+    xlab("observation no.")
+```
+
+
+#### histogram_number_of_peaks
+
+```{r hstpksplots}
+hist(fetal_df$histogram_number_of_peaks, 
+     main="Histogram for histogram_number_of_peaks", 
+     xlab="histogram_number_of_peaks", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_number_of_peaks)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_number_of_peaks boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_number_of_zeroes
+
+```{r hstzrsplots}
+hist(fetal_df$histogram_number_of_zeroes, 
+     main="Histogram for histogram_number_of_zeroes", 
+     xlab="histogram_number_of_zeroes", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_number_of_zeroes)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_number_of_zeroes boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_mode
+
+```{r histmdplots}
+hist(fetal_df$histogram_mode, 
+     main="Histogram for histogram_mode", 
+     xlab="histogram_mode", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_mode)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_mode boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_mean
+
+```{r hstmnplots}
+hist(fetal_df$histogram_mean, 
+     main="Histogram for histogram_mean", 
+     xlab="histogram_mean", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_mean)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_mean boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_median
+
+```{r hstmdnplots}
+hist(fetal_df$histogram_median, 
+     main="Histogram for histogram_median", 
+     xlab="histogram_median", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_median)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_median boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_variance
+
+```{r histvarplots}
+hist(fetal_df$histogram_variance, 
+     main="Histogram for histogram_variance", 
+     xlab="histogram_variance", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_variance)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_variance boxplot") +
+    xlab("observation no.")
+```
+
+#### histogram_tendency
+
+```{r hsttndplots}
+hist(fetal_df$histogram_tendency, 
+     main="Histogram for histogram_tendency", 
+     xlab="histogram_tendency", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_tendency)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("histogram_tendency boxplot") +
+    xlab("observation no.")
+```
+
+#### fetal_health
+
+```{r ftlhlthplots}
+hist(fetal_df$fetal_health, 
+     main="Histogram for fetal_health", 
+     xlab="fetal_health", 
+     border="black", 
+     col="wheat")
+
+fetal_df %>%
+  ggplot( aes(as.numeric(row.names(fetal_df)), fetal_health)) +
+    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
+    geom_jitter(color="black", size=0.4, alpha=0.35) +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("fetal_health boxplot") +
+    xlab("observation no.")
+```
