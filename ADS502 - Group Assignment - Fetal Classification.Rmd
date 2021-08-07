@@ -383,4 +383,8 @@ fetal_df %>%
 ```
 
 #### fetal_health
-
+```{r logreg}
+fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
+logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_train, family = binomial)
+summary(logreg01)
+```
