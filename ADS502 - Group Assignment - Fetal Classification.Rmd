@@ -481,3 +481,24 @@ table_C5
 
 ```
 
+
+```{r}
+
+#Random Forest Model
+library(randomForest)
+
+random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, ntree = 100, type = "classification")
+
+#predict
+
+fetal_random_pred <- predict(object = random_Fetal, X_fetal_test_cart)
+
+table_RF <- table(fetal_test$fetal_health, fetal_random_pred)
+
+table_RF
+
+
+
+
+```
+
