@@ -459,11 +459,24 @@ table_CART <- table(fetal_test$fetal_health, fetal_predCart)
 table_CART
 
 
+```
+```{r}
+#C5 Model
+library(C50)
+library(partykit)
 
+#running C5 algorithm
 
+C5_fetal <- C5.0(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, control = C5.0Control(minCases = 75))
 
+plot(C5_fetal, gp = gpar(fontsize = 8))
 
+fetal_pred_C5 <- predict(object = C5_fetal, newdata = X_fetal_test_cart)
 
+#Table to evaluate model
+
+table_C5 <- table(fetal_test$fetal_health, fetal_pred_C5 )
+table_C5
 
 
 ```
