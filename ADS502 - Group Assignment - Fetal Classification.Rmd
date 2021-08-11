@@ -384,3 +384,50 @@ fetal_df %>%
 
 #### fetal_health
 
+
+```{r}
+
+#KNN
+library(class)
+
+#need to normalize the data first
+
+#function to normalize
+data_norm <- function(x) {((x - min(x)) / (max(x) - min(x)))}
+
+#normalizing training and testing data
+fetal_train_norm <- as.data.frame(lapply(fetal_train, data_norm))
+fetal_test_norm <- as.data.frame(lapply(fetal_test, data_norm))
+
+#getting our target variable
+colnames(fetal_train)
+
+
+fetal_train_labels <- fetal_train[1:fetal_train_dim[1], 9]
+fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
+
+
+#k gets decided based on the squareroot of data points
+#training dataset has 1642 variables. Therefore k is around 40
+
+#predicts labels with actual labels
+fetal_pred <- knn(fetal_train_norm, fetal_test_norm, fetal_train_labels, k = 40)
+table(fetal_pred, fetal_test_labels)
+
+#diagonals are correcly classified
+#triangles are incorrectly classified
+#predicted a 2 incorrectly 2 times as a 1
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
