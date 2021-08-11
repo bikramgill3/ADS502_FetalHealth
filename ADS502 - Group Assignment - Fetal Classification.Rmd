@@ -382,9 +382,132 @@ fetal_df %>%
     xlab("observation no.")
 ```
 
+
 #### fetal_health logistic regression
 ```{r logreg}
 fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
 logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_train, family = binomial)
 summary(logreg01)
 ```
+
+#### fetal_health
+
+
+```{r}
+
+#KNN
+library(class)
+
+#need to normalize the data first
+
+#function to normalize
+data_norm <- function(x) {((x - min(x)) / (max(x) - min(x)))}
+
+#normalizing training and testing data
+fetal_train_norm <- as.data.frame(lapply(fetal_train, data_norm))
+fetal_test_norm <- as.data.frame(lapply(fetal_test, data_norm))
+
+#getting our target variable
+colnames(fetal_train)
+
+
+fetal_train_labels <- fetal_train[1:fetal_train_dim[1], 9]
+fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
+
+
+#k gets decided based on the squareroot of data points
+#training dataset has 1642 variables. Therefore k is around 40
+
+#predicts labels with actual labels
+fetal_pred <- knn(fetal_train_norm, fetal_test_norm, fetal_train_labels, k = 40)
+table(fetal_pred, fetal_test_labels)
+
+#diagonals are correcly classified
+#triangles are incorrectly classified
+#predicted a 2 incorrectly 2 times as a 1
+
+
+
+
+
+```
+```{r}
+
+#Decision Tree Models
+
+#CART model
+library(rpart)
+library(rpart.plot)
+
+#using rpart to run our CART model
+
+fetal_train$fetal_health <- factor(fetal_train$fetal_health)
+fetal_test$fetal_health <- factor(fetal_test$fetal_health)
+
+
+cart01_fetal_train <- rpart(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train)
+
+rpart.plot(cart01_fetal_train, type = 4, extra = 2)
+
+#to obtain classifications for each record, first we will create a dataframe with the predictor vars of the records we wish to classify
+
+library(caret)
+
+X_fetal_test_cart = data.frame(prolongued_decelerations = fetal_test$prolongued_decelerations, abnormal_short_term_variability = fetal_test$abnormal_short_term_variability,percentage_of_time_with_abnormal_long_term_variability = fetal_test$percentage_of_time_with_abnormal_long_term_variability, accelerations = fetal_test$accelerations, histogram_mode = fetal_test$histogram_mode, mean_value_of_long_term_variability = fetal_test$mean_value_of_long_term_variability, histogram_variance = fetal_test$histogram_variance, uterine_contractions = fetal_test$uterine_contractions, fetal_health =fetal_test$fetal_health )
+
+
+#plotting our testing model
+rpart.plot(cart01_fetal_test, type = 4, extra = 2)
+
+#predict with test
+fetal_predCart <- predict(object = cart01_fetal_train, newdata = X_fetal_test_cart, type = "class")
+
+#table
+table_CART <- table(fetal_test$fetal_health, fetal_predCart)
+table_CART
+
+
+```
+```{r}
+#C5 Model
+library(C50)
+library(partykit)
+
+#running C5 algorithm
+
+C5_fetal <- C5.0(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, control = C5.0Control(minCases = 75))
+
+plot(C5_fetal, gp = gpar(fontsize = 8))
+
+fetal_pred_C5 <- predict(object = C5_fetal, newdata = X_fetal_test_cart)
+
+#Table to evaluate model
+
+table_C5 <- table(fetal_test$fetal_health, fetal_pred_C5 )
+table_C5
+
+
+```
+
+
+```{r}
+
+#Random Forest Model
+library(randomForest)
+
+random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, ntree = 100, type = "classification")
+
+#predict
+
+fetal_random_pred <- predict(object = random_Fetal, X_fetal_test_cart)
+
+table_RF <- table(fetal_test$fetal_health, fetal_random_pred)
+
+table_RF
+
+
+
+
+```
+
+
