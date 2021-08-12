@@ -1,6 +1,7 @@
 ---
 title: "ADS502 - Group Assignment - Fetal Classification"
 output: html_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -173,15 +174,19 @@ We can see from below that the vast majority of records reside in category 1 (he
 
 
 ```{r ftlhlthplots}
+
 hist(fetal_df$fetal_health, 
      main="Histogram for fetal_health", 
      xlab="fetal_health", 
      border="black", 
      col="wheat")
+
+
+
+barplot(table(fetal_df$fetal_health), col = c("powderblue", "pink", "plum2"),xlab = "Fetal Health", ylab = "Count", names.arg = c("1 = Normal", "2 = Suspect", "3 = Pathological"), main = "Bar Plot of Fetal Health")
+
+
 ```
-
-
-
 
 
 ### For Modelling Phase; create training and test sets (do this after normalizing data if needed in EDA)
@@ -194,6 +199,32 @@ index <- sample(seq_len(nrow(fetal_df2)), size = sample_size)
  
 fetal_train <- fetal_df2[index, ]
 fetal_test <- fetal_df2[-index, ]
+
+
+fetal_train_dim <- dim(fetal_train)
+cat('Number of Rows in Student Training Dataset: ', fetal_train_dim[1])
+cat('Number of Variables in Student Training Dataset: ', fetal_train_dim[2])
+
+
+#looking at dimensions of testing file
+fetal_test_dim <- dim(fetal_test)
+cat('Number of Rows in Student Testing Dataset: ', fetal_test_dim[1])
+cat('Number of Variables in Student Testing Dataset: ', fetal_test_dim[2])
+
+#looking at fetal health data
+t1 <- table(fetal_train$fetal_health)
+rownames(t1) <- c("1 = Normal", "2 = Suspect", " 3 = Pathalogical")
+t1
+
+#bar graph to see training and testing dimensions
+fetal_train_test_prop <- c(fetal_train_dim[1], fetal_test_dim[1])
+
+barplot(fetal_train_test_prop, col = c("palegreen", "cadetblue2"), main = "Bar Graph of Training vs Test Data Set Proportions", xlab = "Training vs Test", ylab = "Count", names.arg = c("Training Data", "Testing Data"), cex.names = 1)
+
+
+#resampling code??????????????????????????
+
+#do we need to validate?
 
 
 ```
@@ -227,6 +258,14 @@ fetal_df %>%
     ) +
     ggtitle("accelerations boxplot") +
     xlab("observation no.")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+accelerations_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = accelerations))
+accelerations_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Accelerations") + ggtitle("Accelerations Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+
+
 ```
 
 #### uterine_contractions
@@ -425,7 +464,6 @@ summary(logreg01_test)
 
 
 ```{r}
-
 #KNN
 library(class)
 
@@ -435,13 +473,10 @@ library(class)
 data_norm <- function(x) {((x - min(x)) / (max(x) - min(x)))}
 
 #normalizing training and testing data
-fetal_train_norm <- as.data.frame(lapply(fetal_train, data_norm))
-fetal_test_norm <- as.data.frame(lapply(fetal_test, data_norm))
+fetal_train_norm <- as.data.frame(lapply(fetal_train[ , c(1:8)], data_norm))
+fetal_test_norm <- as.data.frame(lapply(fetal_test[ , c(1:8)], data_norm))
 
 #getting our target variable
-colnames(fetal_train)
-
-
 fetal_train_labels <- fetal_train[1:fetal_train_dim[1], 9]
 fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
 
@@ -453,12 +488,7 @@ fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
 fetal_pred <- knn(fetal_train_norm, fetal_test_norm, fetal_train_labels, k = 40)
 table(fetal_pred, fetal_test_labels)
 
-#diagonals are correcly classified
-#triangles are incorrectly classified
-#predicted a 2 incorrectly 2 times as a 1
-
-
-
+#diagonals are correctly classified
 
 
 ```
@@ -485,10 +515,6 @@ rpart.plot(cart01_fetal_train, type = 4, extra = 2)
 library(caret)
 
 X_fetal_test_cart = data.frame(prolongued_decelerations = fetal_test$prolongued_decelerations, abnormal_short_term_variability = fetal_test$abnormal_short_term_variability,percentage_of_time_with_abnormal_long_term_variability = fetal_test$percentage_of_time_with_abnormal_long_term_variability, accelerations = fetal_test$accelerations, histogram_mode = fetal_test$histogram_mode, mean_value_of_long_term_variability = fetal_test$mean_value_of_long_term_variability, histogram_variance = fetal_test$histogram_variance, uterine_contractions = fetal_test$uterine_contractions, fetal_health =fetal_test$fetal_health )
-
-
-#plotting our testing model
-rpart.plot(cart01_fetal_test, type = 4, extra = 2)
 
 #predict with test
 fetal_predCart <- predict(object = cart01_fetal_train, newdata = X_fetal_test_cart, type = "class")
@@ -549,7 +575,9 @@ library(e1071)
 cols = c('prolongued_decelerations', 'abnormal_short_term_variability', 'percentage_of_time_with_abnormal_long_term_variability', 'accelerations', 'histogram_mode', 'mean_value_of_long_term_variability', 'histogram_variance', 'uterine_contractions','fetal_health')
 train_fetal_rebal[, cols] <- lapply(train_fetal_rebal[, cols], as.factor)
 nb01 <- naiveBayes(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
-nb01
+
+#nb01
+
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 ypred <- predict(object = nb01, newdata = fetal_test)
 t.preds <- table(fetal_test$fetal_health, ypred)
