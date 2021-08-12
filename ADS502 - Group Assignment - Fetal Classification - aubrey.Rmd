@@ -16,7 +16,6 @@ library(dplyr)
 library(caret)
 library(tidyverse)
 library(arules)
-library(e1071)
 options(scipen=999)
 ```
 
@@ -194,7 +193,6 @@ index <- sample(seq_len(nrow(fetal_df2)), size = sample_size)
  
 fetal_train <- fetal_df2[index, ]
 fetal_test <- fetal_df2[-index, ]
-
 
 ```
 
@@ -384,187 +382,9 @@ fetal_df %>%
     xlab("observation no.")
 ```
 
-<<<<<<< Updated upstream
-
-#### fetal_health logistic regression
+#### fetal_health
 ```{r logreg}
 fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
 logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_train, family = binomial)
-=======
-#### Rebalancing the training set so that p(3) = .15 
-```{r rebal}
-table(fetal_train$fetal_health)
-#We can see that p(3) is currently .056 so let's increase it to .15
-to.resample1 <- which(fetal_train$fetal_health == "3")
-our.resample1 <- sample(x = to.resample1, size = 182, replace = TRUE)
-our.resample1 <- fetal_train[our.resample1, ]
-train_fetal_rebal <- rbind(fetal_train, our.resample1)
-table(train_fetal_rebal$fetal_health)
-
-```
-##fetal_health logistic regression
-```{r logreg, echo=FALSE}
-train_fetal_rebal$fetal_health <- as.factor(train_fetal_rebal$fetal_health)
-fetal_test$fetal_health <- as.factor(fetal_test$fetal_health)
-
-logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal, family = binomial)
->>>>>>> Stashed changes
 summary(logreg01)
-
-logreg01_test <- glm(formula =fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_test, family = binomial)
-summary(logreg01_test)
-
 ```
-<<<<<<< Updated upstream
-
-#### fetal_health
-
-
-```{r}
-
-#KNN
-library(class)
-
-#need to normalize the data first
-
-#function to normalize
-data_norm <- function(x) {((x - min(x)) / (max(x) - min(x)))}
-
-#normalizing training and testing data
-fetal_train_norm <- as.data.frame(lapply(fetal_train, data_norm))
-fetal_test_norm <- as.data.frame(lapply(fetal_test, data_norm))
-
-#getting our target variable
-colnames(fetal_train)
-
-
-fetal_train_labels <- fetal_train[1:fetal_train_dim[1], 9]
-fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
-
-
-#k gets decided based on the squareroot of data points
-#training dataset has 1642 variables. Therefore k is around 40
-
-#predicts labels with actual labels
-fetal_pred <- knn(fetal_train_norm, fetal_test_norm, fetal_train_labels, k = 40)
-table(fetal_pred, fetal_test_labels)
-
-#diagonals are correcly classified
-#triangles are incorrectly classified
-#predicted a 2 incorrectly 2 times as a 1
-
-
-
-
-
-```
-```{r}
-
-#Decision Tree Models
-
-#CART model
-library(rpart)
-library(rpart.plot)
-
-#using rpart to run our CART model
-
-fetal_train$fetal_health <- factor(fetal_train$fetal_health)
-fetal_test$fetal_health <- factor(fetal_test$fetal_health)
-
-
-cart01_fetal_train <- rpart(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train)
-
-rpart.plot(cart01_fetal_train, type = 4, extra = 2)
-
-#to obtain classifications for each record, first we will create a dataframe with the predictor vars of the records we wish to classify
-
-library(caret)
-
-X_fetal_test_cart = data.frame(prolongued_decelerations = fetal_test$prolongued_decelerations, abnormal_short_term_variability = fetal_test$abnormal_short_term_variability,percentage_of_time_with_abnormal_long_term_variability = fetal_test$percentage_of_time_with_abnormal_long_term_variability, accelerations = fetal_test$accelerations, histogram_mode = fetal_test$histogram_mode, mean_value_of_long_term_variability = fetal_test$mean_value_of_long_term_variability, histogram_variance = fetal_test$histogram_variance, uterine_contractions = fetal_test$uterine_contractions, fetal_health =fetal_test$fetal_health )
-
-
-#plotting our testing model
-rpart.plot(cart01_fetal_test, type = 4, extra = 2)
-
-#predict with test
-fetal_predCart <- predict(object = cart01_fetal_train, newdata = X_fetal_test_cart, type = "class")
-
-#table
-table_CART <- table(fetal_test$fetal_health, fetal_predCart)
-table_CART
-
-
-```
-```{r}
-#C5 Model
-library(C50)
-library(partykit)
-
-#running C5 algorithm
-
-C5_fetal <- C5.0(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, control = C5.0Control(minCases = 75))
-
-plot(C5_fetal, gp = gpar(fontsize = 8))
-
-fetal_pred_C5 <- predict(object = C5_fetal, newdata = X_fetal_test_cart)
-
-#Table to evaluate model
-
-table_C5 <- table(fetal_test$fetal_health, fetal_pred_C5 )
-table_C5
-
-
-```
-
-
-```{r}
-
-#Random Forest Model
-library(randomForest)
-
-random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, ntree = 100, type = "classification")
-
-#predict
-
-fetal_random_pred <- predict(object = random_Fetal, X_fetal_test_cart)
-
-table_RF <- table(fetal_test$fetal_health, fetal_random_pred)
-
-table_RF
-
-
-
-
-```
-
-
-=======
-### All coefficients are statistically significant except for histogram_variance and mean_value_of_long_term_variability
-###For every one unit change in histogram variance, the log odds of fetal health (versus non-admission) increases by 0.285.
-
-```{r naivebayes}
-#install.packages("e1071")
-library(e1071)
-cols = c('prolongued_decelerations', 'abnormal_short_term_variability', 'percentage_of_time_with_abnormal_long_term_variability', 'accelerations', 'histogram_mode', 'mean_value_of_long_term_variability', 'histogram_variance', 'uterine_contractions','fetal_health')
-train_fetal_rebal[, cols] <- lapply(train_fetal_rebal[, cols], as.factor)
-nb01 <- naiveBayes(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
-nb01
-fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
-ypred <- predict(object = nb01, newdata = fetal_test)
-t.preds <- table(fetal_test$fetal_health, ypred)
-rownames(t.preds) <- c("Actual: 1", "Actual: 2", "Actual: 3")
-colnames(t.preds) <- c("Predicted: 1", "Predicted: 2", "Predicted: 3   ")
-addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
-```
-##The A‐priori probabilities are the values of p(Y)
-### p(1) = .715
-### p(2) = .134
-### p(3) = .15
-```{r nb2}
-#install.packages('caret', dependencies = T)
-library(caret)
-fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
-predictions <- predict(nb01, fetal_test)
-confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
-```
->>>>>>> Stashed changes
