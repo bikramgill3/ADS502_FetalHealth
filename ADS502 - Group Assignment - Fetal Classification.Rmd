@@ -384,15 +384,15 @@ fetal_df %>%
     xlab("observation no.")
 ```
 
-<<<<<<< Updated upstream
 
-#### fetal_health logistic regression
+#### fetal_health logistic regression before resampling
 ```{r logreg}
 fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
 logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_train, family = binomial)
-=======
+summary(logreg01)
+```
 #### Rebalancing the training set so that p(3) = .15 
-```{r rebal}
+```{r rebalance}
 table(fetal_train$fetal_health)
 #We can see that p(3) is currently .056 so let's increase it to .15
 to.resample1 <- which(fetal_train$fetal_health == "3")
@@ -403,19 +403,23 @@ table(train_fetal_rebal$fetal_health)
 
 ```
 ##fetal_health logistic regression
-```{r logreg, echo=FALSE}
-train_fetal_rebal$fetal_health <- as.factor(train_fetal_rebal$fetal_health)
-fetal_test$fetal_health <- as.factor(fetal_test$fetal_health)
+```{r logreg}
+
+train_fetal_rebal$fetal_health <- ordered(as.factor(train_fetal_rebal$fetal_health))
+fetal_test$fetal_health <- ordered(as.factor(fetal_test$fetal_health))
+
 
 logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal, family = binomial)
->>>>>>> Stashed changes
 summary(logreg01)
 
 logreg01_test <- glm(formula =fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_test, family = binomial)
 summary(logreg01_test)
 
+
+
 ```
-<<<<<<< Updated upstream
+### All coefficients are statistically significant except for histogram_variance and mean_value_of_long_term_variability
+###For every one unit change in histogram variance, the log odds of fetal health increases by 0.1354
 
 #### fetal_health
 
@@ -538,9 +542,6 @@ table_RF
 ```
 
 
-=======
-### All coefficients are statistically significant except for histogram_variance and mean_value_of_long_term_variability
-###For every one unit change in histogram variance, the log odds of fetal health (versus non-admission) increases by 0.285.
 
 ```{r naivebayes}
 #install.packages("e1071")
@@ -567,4 +568,4 @@ fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 predictions <- predict(nb01, fetal_test)
 confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
 ```
->>>>>>> Stashed changes
+
