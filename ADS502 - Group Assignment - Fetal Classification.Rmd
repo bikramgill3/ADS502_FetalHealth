@@ -266,6 +266,14 @@ accelerations_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_healt
 accelerations_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Accelerations") + ggtitle("Accelerations Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
 
 
+
+par(mfrow=c(1,8))
+  for(i in 1:8) {
+  boxplot(temp_fetal_df[,i], main=names(temp_fetal_df)[i])
+}
+
+featurePlot(x=temp_fetal_df[,1:8], y= temp_fetal_df[,9], plot="box")
+
 ```
 
 #### uterine_contractions
@@ -486,12 +494,16 @@ fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
 
 #predicts labels with actual labels
 fetal_pred <- knn(fetal_train_norm, fetal_test_norm, fetal_train_labels, k = 40)
-table(fetal_pred, fetal_test_labels)
+table_KNN <- table(fetal_pred, fetal_test_labels)
+table_KNN <- addmargins(A = table_KNN, FUN = list(Total = sum), quiet = TRUE)
+table_KNN
 
-#diagonals are correctly classified
+confusionMatrix(fetal_pred, fetal_test$fetal_health)
+
 
 
 ```
+
 ```{r}
 
 #Decision Tree Models
@@ -521,7 +533,10 @@ fetal_predCart <- predict(object = cart01_fetal_train, newdata = X_fetal_test_ca
 
 #table
 table_CART <- table(fetal_test$fetal_health, fetal_predCart)
+table_CART <- addmargins(A = table_CART, FUN = list(Total=sum), quiet = TRUE)
 table_CART
+
+confusionMatrix(fetal_predCart, fetal_test$fetal_health)
 
 
 ```
@@ -541,7 +556,10 @@ fetal_pred_C5 <- predict(object = C5_fetal, newdata = X_fetal_test_cart)
 #Table to evaluate model
 
 table_C5 <- table(fetal_test$fetal_health, fetal_pred_C5 )
+table_C5 <- addmargins(A = table_C5, FUN = list(Total=sum), quiet = TRUE)
 table_C5
+
+confusionMatrix(fetal_pred_C5, fetal_test$fetal_health)
 
 
 ```
@@ -559,9 +577,10 @@ random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations +
 fetal_random_pred <- predict(object = random_Fetal, X_fetal_test_cart)
 
 table_RF <- table(fetal_test$fetal_health, fetal_random_pred)
-
+table_RF <- addmargins(A = table_RF, FUN = list(Total=sum), quiet = TRUE)
 table_RF
 
+confusionMatrix(fetal_random_pred, fetal_test$fetal_health)
 
 
 
@@ -596,4 +615,6 @@ fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 predictions <- predict(nb01, fetal_test)
 confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
 ```
+
+
 
