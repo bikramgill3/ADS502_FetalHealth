@@ -644,6 +644,7 @@ library(caret)
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 predictions <- predict(nb01, fetal_test)
 confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
+confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes', mode = "prec_recall")
 ```
 
 
