@@ -396,29 +396,31 @@ fetal_df %>%
 ```
 
 
-#### fetal_health logistic regression before resampling
-```{r logreg}
-fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
-logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_train, family = binomial)
-summary(logreg01)
-```
-
 ##fetal_health logistic regression
 ```{r logreg}
 library(nnet)
-
+train_fetal_rebal$fetal_health <- ordered(as.factor(train_fetal_rebal$fetal_health))
 logreg02 <- multinom(fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
-l <- summary(logreg02)
-l
 
+
+<<<<<<< Updated upstream
 
 lpred <- predict(logreg02, fetal_test_copy, type = 'class')
 table(fetal_test_copy$fetal_health, lpred)
 ```
 ### All coefficients are statistically significant except for histogram_variance and mean_value_of_long_term_variability
 ###For every one unit change in histogram variance, the log odds of fetal health increases by 0.1354
+=======
+#changed to fetal test
+#Let Aubrey know
+fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
+#Predict using test set
+lpred <- predict(logreg02, fetal_test, type = 'class')
+table(lpred, fetal_test$fetal_health)
+>>>>>>> Stashed changes
 
-#### fetal_health
+confusionMatrix(lpred, factor(fetal_test$fetal_health))
+```
 
 
 ```{r}
@@ -549,9 +551,9 @@ nb01 <- naiveBayes(formula = fetal_health ~ prolongued_decelerations + abnormal_
 nb01
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 ypred <- predict(object = nb01, newdata = fetal_test)
-t.preds <- table(fetal_test$fetal_health, ypred)
-rownames(t.preds) <- c("Actual: 1", "Actual: 2", "Actual: 3")
-colnames(t.preds) <- c("Predicted: 1", "Predicted: 2", "Predicted: 3   ")
+t.preds <- table(ypred, fetal_test$fetal_health)
+colnames(t.preds) <- c("Actual: 1", "Actual: 2", "Actual: 3")
+rownames(t.preds) <- c("Predicted: 1", "Predicted: 2", "Predicted: 3   ")
 addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
 ```
 ##The A‐priori probabilities are the values of p(Y)
