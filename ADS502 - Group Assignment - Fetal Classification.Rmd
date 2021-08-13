@@ -458,8 +458,6 @@ summaryStats <- function(cm) {
   return(theRest)
   
 }
-
-
 ```
 
 
@@ -480,11 +478,7 @@ summaryStats(logreg_cm)
   
 
 ```
-```{r test}
-summaryStats(logreg_cm)
-  
-logreg_cm
-```
+
 
 ```{r knn}
 #KNN
@@ -639,6 +633,7 @@ addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
 library(caret)
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 predictions <- predict(nb01, fetal_test)
+
 nb_cm <- confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
 
 summaryStats(nb_cm)
