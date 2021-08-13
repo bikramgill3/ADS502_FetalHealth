@@ -1,6 +1,7 @@
 ---
 title: "ADS502 - Group Assignment - Fetal Classification"
 output: html_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -173,15 +174,19 @@ We can see from below that the vast majority of records reside in category 1 (he
 
 
 ```{r ftlhlthplots}
+
 hist(fetal_df$fetal_health, 
      main="Histogram for fetal_health", 
      xlab="fetal_health", 
      border="black", 
      col="wheat")
+
+
+
+barplot(table(fetal_df$fetal_health), col = c("powderblue", "pink", "plum2"),xlab = "Fetal Health", ylab = "Count", names.arg = c("1 = Normal", "2 = Suspect", "3 = Pathological"), main = "Bar Plot of Fetal Health")
+
+
 ```
-
-
-
 
 
 ### For Modelling Phase; create training and test sets (do this after normalizing data if needed in EDA)
@@ -194,6 +199,32 @@ index <- sample(seq_len(nrow(fetal_df2)), size = sample_size)
  
 fetal_train <- fetal_df2[index, ]
 fetal_test <- fetal_df2[-index, ]
+
+
+fetal_train_dim <- dim(fetal_train)
+cat('Number of Rows in Student Training Dataset: ', fetal_train_dim[1])
+cat('Number of Variables in Student Training Dataset: ', fetal_train_dim[2])
+
+
+#looking at dimensions of testing file
+fetal_test_dim <- dim(fetal_test)
+cat('Number of Rows in Student Testing Dataset: ', fetal_test_dim[1])
+cat('Number of Variables in Student Testing Dataset: ', fetal_test_dim[2])
+
+#looking at fetal health data
+t1 <- table(fetal_train$fetal_health)
+rownames(t1) <- c("1 = Normal", "2 = Suspect", " 3 = Pathalogical")
+t1
+
+#bar graph to see training and testing dimensions
+fetal_train_test_prop <- c(fetal_train_dim[1], fetal_test_dim[1])
+
+barplot(fetal_train_test_prop, col = c("palegreen", "cadetblue2"), main = "Bar Graph of Training vs Test Data Set Proportions", xlab = "Training vs Test", ylab = "Count", names.arg = c("Training Data", "Testing Data"), cex.names = 1)
+
+
+#resampling code??????????????????????????
+
+#do we need to validate?
 
 
 ```
@@ -238,6 +269,22 @@ fetal_df %>%
     ) +
     ggtitle("accelerations boxplot") +
     xlab("observation no.")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+accelerations_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = accelerations))
+accelerations_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Accelerations") + ggtitle("Accelerations Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+
+
+
+par(mfrow=c(1,8))
+  for(i in 1:8) {
+  boxplot(temp_fetal_df[,i], main=names(temp_fetal_df)[i])
+}
+
+featurePlot(x=temp_fetal_df[,1:8], y= temp_fetal_df[,9], plot="box")
+
 ```
 
 #### uterine_contractions
@@ -402,31 +449,35 @@ library(nnet)
 train_fetal_rebal$fetal_health <- ordered(as.factor(train_fetal_rebal$fetal_health))
 logreg02 <- multinom(fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
 
+#changed to fetal test
+#Let Aubrey know
 
-<<<<<<< Updated upstream
 
 lpred <- predict(logreg02, fetal_test_copy, type = 'class')
 table(fetal_test_copy$fetal_health, lpred)
+
+lpred <- predict(logreg02, fetal_test, type = 'class')
+table(fetal_test$fetal_health, lpred)
+
 ```
 ### All coefficients are statistically significant except for histogram_variance and mean_value_of_long_term_variability
-###For every one unit change in histogram variance, the log odds of fetal health increases by 0.1354
-=======
+
 #changed to fetal test
 #Let Aubrey know
 fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
 #Predict using test set
 lpred <- predict(logreg02, fetal_test, type = 'class')
 table(lpred, fetal_test$fetal_health)
->>>>>>> Stashed changes
+
 
 confusionMatrix(lpred, factor(fetal_test$fetal_health))
 ```
 
 
 ```{r}
-
 #KNN
 library(class)
+library(kableExtra)
 
 #need to normalize the data first
 
@@ -434,13 +485,10 @@ library(class)
 data_norm <- function(x) {((x - min(x)) / (max(x) - min(x)))}
 
 #normalizing training and testing data
-fetal_train_norm <- as.data.frame(lapply(fetal_train, data_norm))
-fetal_test_norm <- as.data.frame(lapply(fetal_test, data_norm))
+fetal_train_norm <- as.data.frame(lapply(fetal_train[ , c(1:8)], data_norm))
+fetal_test_norm <- as.data.frame(lapply(fetal_test[ , c(1:8)], data_norm))
 
 #getting our target variable
-colnames(fetal_train)
-
-
 fetal_train_labels <- fetal_train[1:fetal_train_dim[1], 9]
 fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
 
@@ -450,17 +498,50 @@ fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
 
 #predicts labels with actual labels
 fetal_pred <- knn(fetal_train_norm, fetal_test_norm, fetal_train_labels, k = 40)
-table(fetal_pred, fetal_test_labels)
+table_KNN <- table(fetal_pred, fetal_test_labels)
+table_KNN <- addmargins(A = table_KNN, FUN = list(Total = sum), quiet = TRUE)
+table_KNN
 
-#diagonals are correcly classified
-#triangles are incorrectly classified
-#predicted a 2 incorrectly 2 times as a 1
+
+KNN_cm <-confusionMatrix(fetal_pred, factor(fetal_test$fetal_health))
+KNN_cm
+#KNN_cm <- as.matrix(KNN_cm)
+
+#vars we will need to compute
+
+summaryStats <- function(cm) {
+  #convert confusion matrix to matrix
+  cm <- as.matrix(cm)
+  #number of instances
+  n = sum(cm)
+  #numbers of classes
+  nc = nrow(cm)
+  #correctly classified instances in a class
+  diag = diag(cm)
+  #numbers of instances in a class
+  rowsums = apply(cm, 1, sum)
+  #number of predictions in a class
+  colsums = apply(cm, 2, sum)
+  accuracy = sum(diag)/n
+  precision = diag/colsums
+  recall = diag/rowsums
+  f1 = 2* precision*recall / (precision + recall)
+  f2 = 5*(precision*recall) / ((4*precision) + recall)
+  f0.5 = 1.25*(precision*recall) / ((0.25*precision) + recall)
+  theRest <- data.frame(precision, recall, f1, f2, f0.5)
+  theRest <- theRest %>% kbl(caption = sprintf("Accuracy: %f", accuracy) ) %>%  kable_classic(full_width = F, html_font = "Cambria")
+  return(theRest)
+  
+}
+
+summaryStats(KNN_cm)
 
 
 
 
 
 ```
+
 ```{r}
 
 #Decision Tree Models
@@ -485,16 +566,20 @@ library(caret)
 
 X_fetal_test_cart = data.frame(prolongued_decelerations = fetal_test$prolongued_decelerations, abnormal_short_term_variability = fetal_test$abnormal_short_term_variability,percentage_of_time_with_abnormal_long_term_variability = fetal_test$percentage_of_time_with_abnormal_long_term_variability, accelerations = fetal_test$accelerations, histogram_mode = fetal_test$histogram_mode, mean_value_of_long_term_variability = fetal_test$mean_value_of_long_term_variability, histogram_variance = fetal_test$histogram_variance, uterine_contractions = fetal_test$uterine_contractions, fetal_health =fetal_test$fetal_health )
 
-
-#plotting our testing model
-rpart.plot(cart01_fetal_test, type = 4, extra = 2)
-
 #predict with test
 fetal_predCart <- predict(object = cart01_fetal_train, newdata = X_fetal_test_cart, type = "class")
 
 #table
 table_CART <- table(fetal_test$fetal_health, fetal_predCart)
+table_CART <- addmargins(A = table_CART, FUN = list(Total=sum), quiet = TRUE)
 table_CART
+
+CART_cm <- confusionMatrix(fetal_predCart, fetal_test$fetal_health)
+CART_cm
+
+
+summaryStats(CART_cm)
+
 
 
 ```
@@ -514,8 +599,13 @@ fetal_pred_C5 <- predict(object = C5_fetal, newdata = X_fetal_test_cart)
 #Table to evaluate model
 
 table_C5 <- table(fetal_test$fetal_health, fetal_pred_C5 )
+table_C5 <- addmargins(A = table_C5, FUN = list(Total=sum), quiet = TRUE)
 table_C5
 
+C5_cm <- confusionMatrix(fetal_pred_C5, fetal_test$fetal_health)
+C5_cm
+
+summaryStats(C5_cm)
 
 ```
 
@@ -532,9 +622,10 @@ random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations +
 fetal_random_pred <- predict(object = random_Fetal, X_fetal_test_cart)
 
 table_RF <- table(fetal_test$fetal_health, fetal_random_pred)
-
+table_RF <- addmargins(A = table_RF, FUN = list(Total=sum), quiet = TRUE)
 table_RF
 
+confusionMatrix(fetal_random_pred, fetal_test$fetal_health)
 
 
 
@@ -548,7 +639,9 @@ library(e1071)
 cols = c('prolongued_decelerations', 'abnormal_short_term_variability', 'percentage_of_time_with_abnormal_long_term_variability', 'accelerations', 'histogram_mode', 'mean_value_of_long_term_variability', 'histogram_variance', 'uterine_contractions','fetal_health')
 train_fetal_rebal[, cols] <- lapply(train_fetal_rebal[, cols], as.factor)
 nb01 <- naiveBayes(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
-nb01
+
+#nb01
+
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 ypred <- predict(object = nb01, newdata = fetal_test)
 t.preds <- table(ypred, fetal_test$fetal_health)
@@ -567,4 +660,8 @@ fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 predictions <- predict(nb01, fetal_test)
 confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
 ```
+
+
+
+
 
