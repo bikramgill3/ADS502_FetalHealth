@@ -18,6 +18,11 @@ library(caret)
 library(tidyverse)
 library(arules)
 library(e1071)
+library(caret)
+library(class)
+library(kableExtra)
+library(C50)
+library(partykit)
 options(scipen=999)
 ```
 
@@ -174,18 +179,7 @@ We can see from below that the vast majority of records reside in category 1 (he
 
 
 ```{r ftlhlthplots}
-
-hist(fetal_df$fetal_health, 
-     main="Histogram for fetal_health", 
-     xlab="fetal_health", 
-     border="black", 
-     col="wheat")
-
-
-
 barplot(table(fetal_df$fetal_health), col = c("powderblue", "pink", "plum2"),xlab = "Fetal Health", ylab = "Count", names.arg = c("1 = Normal", "2 = Suspect", "3 = Pathological"), main = "Bar Plot of Fetal Health")
-
-
 ```
 
 
@@ -220,13 +214,6 @@ t1
 fetal_train_test_prop <- c(fetal_train_dim[1], fetal_test_dim[1])
 
 barplot(fetal_train_test_prop, col = c("palegreen", "cadetblue2"), main = "Bar Graph of Training vs Test Data Set Proportions", xlab = "Training vs Test", ylab = "Count", names.arg = c("Training Data", "Testing Data"), cex.names = 1)
-
-
-#resampling code??????????????????????????
-
-#do we need to validate?
-
-
 ```
 #### Rebalancing the training set so that p(3) = .15 
 ```{r rebalance}
@@ -443,26 +430,65 @@ fetal_df %>%
 ```
 
 
+```{r evaluationfunction}
+## Define function for later use.
+summaryStats <- function(cm) {
+  #convert confusion matrix to matrix
+  cm <- as.matrix(cm)
+  #number of instances
+  n = sum(cm)
+  #numbers of classes
+  nc = nrow(cm)
+  #correctly classified instances in a class
+  diag = diag(cm)
+  #numbers of instances in a class
+  rowsums = apply(cm, 1, sum)
+  #number of predictions in a class
+  colsums = apply(cm, 2, sum)
+  accuracy = sum(diag)/n
+  # precision = diag/colsums
+  # recall = diag/rowsums
+  precision = diag/rowsums
+  recall = diag/colsums
+  f1 = 2* precision*recall / (precision + recall)
+  f2 = 5*(precision*recall) / ((4*precision) + recall)
+  f0.5 = 1.25*(precision*recall) / ((0.25*precision) + recall)
+  theRest <- data.frame(precision, recall, f1, f2, f0.5)
+  theRest <- theRest %>% kbl(caption = sprintf("Accuracy: %f", accuracy) ) %>%  kable_classic(full_width = F, html_font = "Cambria")
+  return(theRest)
+  
+}
+
+
+```
+
+
 ##fetal_health logistic regression
 ```{r logreg}
 library(nnet)
 
 logreg02 <- multinom(fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
 
-
-#changed to fetal test
-#Let Aubrey know
-fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
 #Predict using test set
 lpred <- predict(logreg02, fetal_test, type = 'class')
 table(fetal_test$fetal_health, lpred)
-confusionMatrix(lpred, factor(fetal_test$fetal_health))
+logreg_cm <- confusionMatrix(lpred, factor(fetal_test$fetal_health))
+
+
+
+summaryStats(logreg_cm)
+  
+
+```
+```{r test}
+summaryStats(logreg_cm)
+  
+logreg_cm
 ```
 
-```{r}
+```{r knn}
 #KNN
-library(class)
-library(kableExtra)
+
 
 #need to normalize the data first
 
@@ -494,40 +520,12 @@ KNN_cm
 
 #vars we will need to compute
 
-summaryStats <- function(cm) {
-  #convert confusion matrix to matrix
-  cm <- as.matrix(cm)
-  #number of instances
-  n = sum(cm)
-  #numbers of classes
-  nc = nrow(cm)
-  #correctly classified instances in a class
-  diag = diag(cm)
-  #numbers of instances in a class
-  rowsums = apply(cm, 1, sum)
-  #number of predictions in a class
-  colsums = apply(cm, 2, sum)
-  accuracy = sum(diag)/n
-  precision = diag/colsums
-  recall = diag/rowsums
-  f1 = 2* precision*recall / (precision + recall)
-  f2 = 5*(precision*recall) / ((4*precision) + recall)
-  f0.5 = 1.25*(precision*recall) / ((0.25*precision) + recall)
-  theRest <- data.frame(precision, recall, f1, f2, f0.5)
-  theRest <- theRest %>% kbl(caption = sprintf("Accuracy: %f", accuracy) ) %>%  kable_classic(full_width = F, html_font = "Cambria")
-  return(theRest)
-  
-}
+
 
 summaryStats(KNN_cm)
-
-
-
-
-
 ```
 
-```{r}
+```{r decisiontrees}
 
 #Decision Tree Models
 
@@ -564,14 +562,12 @@ CART_cm
 
 
 summaryStats(CART_cm)
-
-
-
 ```
-```{r}
+
+
+```{r c5}
 #C5 Model
-library(C50)
-library(partykit)
+
 
 #running C5 algorithm
 
@@ -595,7 +591,7 @@ summaryStats(C5_cm)
 ```
 
 
-```{r}
+```{r randomforest}
 
 #Random Forest Model
 library(randomForest)
@@ -610,9 +606,9 @@ table_RF <- table(fetal_test$fetal_health, fetal_random_pred)
 table_RF <- addmargins(A = table_RF, FUN = list(Total=sum), quiet = TRUE)
 table_RF
 
-confusionMatrix(fetal_random_pred, fetal_test$fetal_health)
+randforest_cm <- confusionMatrix(fetal_random_pred, fetal_test$fetal_health)
 
-
+summaryStats(randforest_cm)
 
 ```
 
@@ -625,7 +621,6 @@ cols = c('prolongued_decelerations', 'abnormal_short_term_variability', 'percent
 train_fetal_rebal[, cols] <- lapply(train_fetal_rebal[, cols], as.factor)
 nb01 <- naiveBayes(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
 
-#nb01
 
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 ypred <- predict(object = nb01, newdata = fetal_test)
@@ -638,12 +633,15 @@ addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
 ### p(1) = .715
 ### p(2) = .134
 ### p(3) = .15
+
 ```{r nb2}
 #install.packages('caret', dependencies = T)
 library(caret)
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 predictions <- predict(nb01, fetal_test)
-confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
+nb_cm <- confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
+
+summaryStats(nb_cm)
 ```
 
 
