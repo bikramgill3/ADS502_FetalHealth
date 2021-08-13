@@ -228,6 +228,17 @@ barplot(fetal_train_test_prop, col = c("palegreen", "cadetblue2"), main = "Bar G
 
 
 ```
+#### Rebalancing the training set so that p(3) = .15 
+```{r rebalance}
+table(fetal_train$fetal_health)
+#We can see that p(3) is currently .056 so let's increase it to .15
+to.resample1 <- which(fetal_train$fetal_health == "3")
+our.resample1 <- sample(x = to.resample1, size = 182, replace = TRUE)
+our.resample1 <- fetal_train[our.resample1, ]
+train_fetal_rebal <- rbind(fetal_train, our.resample1)
+table(train_fetal_rebal$fetal_health)
+
+```
 
 
 
@@ -438,32 +449,18 @@ fetal_train$fetal_health <- ordered(as.factor(fetal_train$fetal_health))
 logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_train, family = binomial)
 summary(logreg01)
 ```
-#### Rebalancing the training set so that p(3) = .15 
-```{r rebalance}
-table(fetal_train$fetal_health)
-#We can see that p(3) is currently .056 so let's increase it to .15
-to.resample1 <- which(fetal_train$fetal_health == "3")
-our.resample1 <- sample(x = to.resample1, size = 182, replace = TRUE)
-our.resample1 <- fetal_train[our.resample1, ]
-train_fetal_rebal <- rbind(fetal_train, our.resample1)
-table(train_fetal_rebal$fetal_health)
 
-```
 ##fetal_health logistic regression
 ```{r logreg}
+library(nnet)
 
-train_fetal_rebal$fetal_health <- ordered(as.factor(train_fetal_rebal$fetal_health))
-fetal_test$fetal_health <- ordered(as.factor(fetal_test$fetal_health))
-
-
-logreg01 <- glm(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal, family = binomial)
-summary(logreg01)
-
-logreg01_test <- glm(formula =fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = fetal_test, family = binomial)
-summary(logreg01_test)
+logreg02 <- multinom(fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
+l <- summary(logreg02)
+l
 
 
-
+lpred <- predict(logreg02, fetal_test_copy, type = 'class')
+table(fetal_test_copy$fetal_health, lpred)
 ```
 ### All coefficients are statistically significant except for histogram_variance and mean_value_of_long_term_variability
 ###For every one unit change in histogram variance, the log odds of fetal health increases by 0.1354
