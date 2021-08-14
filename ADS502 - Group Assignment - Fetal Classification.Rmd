@@ -275,7 +275,8 @@ summaryStats <- function(cm) {
   f1 = 2* precision*recall / (precision + recall)
   f2 = 5*(precision*recall) / ((4*precision) + recall)
   f0.5 = 1.25*(precision*recall) / ((0.25*precision) + recall)
-  theRest <- data.frame(precision, recall, f1, f2, f0.5)
+  fetal.health <- c(1,2,3)
+  theRest <- data.frame(fetal.health,precision, recall, f1, f2, f0.5)
   theRest <- theRest %>% kbl(caption = sprintf("Accuracy: %f", accuracy) ) %>%  kable_classic(full_width = F, html_font = "Cambria")
   return(theRest)
   
