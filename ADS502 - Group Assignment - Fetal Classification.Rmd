@@ -23,16 +23,24 @@ library(class)
 library(kableExtra)
 library(C50)
 library(partykit)
+library(nnet)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(randomForest)
 options(scipen=999)
 ```
 
+####################################################################################################################################
 ## Exploratory Data Analysis
+####################################################################################################################################
 
 In this section, we will explore our data and develop an understanding of the information available to us. Our overall goal is to determine which records in the set may be prone to higher chances of mortality. 
 
 ### Read data
 ```{r dataframes}
 fetal_df <- read.csv(file = 'fetal_health.csv')
+head(fetal_df)
 ```
 
 ### Missing Values
@@ -183,10 +191,9 @@ barplot(table(fetal_df$fetal_health), col = c("powderblue", "pink", "plum2"),xla
 ```
 
 
-### For Modelling Phase; create training and test sets (do this after normalizing data if needed in EDA)
+### For Modelling Phase; create training and test sets 
 ```{r traintest}
 ## Create train and test sets; to be used later for modelling
-## set the seed to make your partition reproducible
 set.seed(7)
 sample_size = round(nrow(fetal_df2)*.80)
 index <- sample(seq_len(nrow(fetal_df2)), size = sample_size)
@@ -215,7 +222,12 @@ fetal_train_test_prop <- c(fetal_train_dim[1], fetal_test_dim[1])
 
 barplot(fetal_train_test_prop, col = c("palegreen", "cadetblue2"), main = "Bar Graph of Training vs Test Data Set Proportions", xlab = "Training vs Test", ylab = "Count", names.arg = c("Training Data", "Testing Data"), cex.names = 1)
 ```
+
+
 #### Rebalancing the training set so that p(3) = .15 
+
+As mentioned earlier, most records in the dataset have fetal_health = 1. fetal_health = 3 had the lowest occurrence; which has been rebalanced to have a sample size closer to fetal_health = 2. The records are not perfectly balanced, but this new split ensures better sampling across the three classes. 
+
 ```{r rebalance}
 table(fetal_train$fetal_health)
 #We can see that p(3) is currently .056 so let's increase it to .15
@@ -227,208 +239,17 @@ table(train_fetal_rebal$fetal_health)
 
 ```
 
+####################################################################################################################################
+## Classification Models
+####################################################################################################################################
 
+Now that our features have been selected, data has been cleaned and train/test data has been prepared, we will evaluate the performance of various classification models on this dataset. The goal is to determine whether underlying data can be used to determine fetal health accurately, and if so, which model provides the best results. 
 
+This will be further explored in our overall paper. 
 
+### Evaluation function
 
-
-## Appendix
-
-### Appendix 1: Boxplots and Histograms for each Feature
-
-#### accelerations
-
-```{r accelplots}
-hist(fetal_df$accelerations, 
-     main="Histogram for accelerations", 
-     xlab="accelerations", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), accelerations)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("accelerations boxplot") +
-    xlab("observation no.")
-
-temp_fetal_df <- fetal_df
-temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
-
-accelerations_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = accelerations))
-accelerations_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Accelerations") + ggtitle("Accelerations Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
-
-
-
-par(mfrow=c(1,8))
-  for(i in 1:8) {
-  boxplot(temp_fetal_df[,i], main=names(temp_fetal_df)[i])
-}
-
-featurePlot(x=temp_fetal_df[,1:8], y= temp_fetal_df[,9], plot="box")
-
-```
-
-#### uterine_contractions
-
-```{r utcontrplots}
-hist(fetal_df$uterine_contractions, 
-     main="Histogram for uterine_contractions", 
-     xlab="uterine_contractions", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), uterine_contractions)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("uterine_contractions boxplot") +
-    xlab("observation no.")
-```
-
-
-#### prolongued_decelerations
-
-```{r prldecelplots}
-hist(fetal_df$prolongued_decelerations, 
-     main="Histogram for prolongued_decelerations", 
-     xlab="prolongued_decelerations", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), prolongued_decelerations)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("prolongued_decelerations boxplot") +
-    xlab("observation no.")
-```
-
-#### abnormal_short_term_variability
-
-```{r abnvarplots}
-hist(fetal_df$abnormal_short_term_variability, 
-     main="Histogram for abnormal_short_term_variability", 
-     xlab="abnormal_short_term_variability", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), abnormal_short_term_variability)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("abnormal_short_term_variability boxplot") +
-    xlab("observation no.")
-```
-
-#### percentage_of_time_with_abnormal_long_term_variability
-
-```{r pctabvarplots}
-hist(fetal_df$percentage_of_time_with_abnormal_long_term_variability, 
-     main="Histogram for percentage_of_time_with_abnormal_long_term_variability", 
-     xlab="percentage_of_time_with_abnormal_long_term_variability", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), percentage_of_time_with_abnormal_long_term_variability)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("percentage_of_time_with_abnormal_long_term_variability boxplot") +
-    xlab("observation no.")
-```
-
-#### mean_value_of_long_term_variability
-
-```{r mnlgvarplots}
-hist(fetal_df$mean_value_of_long_term_variability, 
-     main="Histogram for mean_value_of_long_term_variability", 
-     xlab="mean_value_of_long_term_variability", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), mean_value_of_long_term_variability)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("mean_value_of_long_term_variability boxplot") +
-    xlab("observation no.")
-```
-
-#### histogram_mode
-
-```{r histmdplots}
-hist(fetal_df$histogram_mode, 
-     main="Histogram for histogram_mode", 
-     xlab="histogram_mode", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_mode)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("histogram_mode boxplot") +
-    xlab("observation no.")
-```
-
-#### histogram_variance
-
-```{r histvarplots}
-hist(fetal_df$histogram_variance, 
-     main="Histogram for histogram_variance", 
-     xlab="histogram_variance", 
-     border="black", 
-     col="wheat")
-
-fetal_df %>%
-  ggplot( aes(as.numeric(row.names(fetal_df)), histogram_variance)) +
-    geom_boxplot(color="tomato3", fill="wheat", alpha=0.2) +
-    geom_jitter(color="black", size=0.4, alpha=0.35) +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("histogram_variance boxplot") +
-    xlab("observation no.")
-```
-
+This function has been defined to compute evaluation metrics based on contingency tables. It will be used by our classification models further below. 
 
 ```{r evaluationfunction}
 ## Define function for later use.
@@ -461,35 +282,26 @@ summaryStats <- function(cm) {
 ```
 
 
-##fetal_health logistic regression
+### Logistic Regression
 ```{r logreg}
-library(nnet)
-
+#train regression model
 logreg02 <- multinom(fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
 
-#Predict using test set
+#prediction on test data
 lpred <- predict(logreg02, fetal_test, type = 'class')
 table(fetal_test$fetal_health, lpred)
+
+#evalutation metrics
 logreg_cm <- confusionMatrix(lpred, factor(fetal_test$fetal_health))
-
-
-
 summaryStats(logreg_cm)
-  
-
 ```
 
-
+### K-NN 
 ```{r knn}
-#KNN
-
-
-#need to normalize the data first
-
-#function to normalize
+#normalize data
 data_norm <- function(x) {((x - min(x)) / (max(x) - min(x)))}
 
-#normalizing training and testing data
+#normalize train and test data
 fetal_train_norm <- as.data.frame(lapply(fetal_train[ , c(1:8)], data_norm))
 fetal_test_norm <- as.data.frame(lapply(fetal_test[ , c(1:8)], data_norm))
 
@@ -498,55 +310,37 @@ fetal_train_labels <- fetal_train[1:fetal_train_dim[1], 9]
 fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
 
 
-#k gets decided based on the squareroot of data points
-#training dataset has 1642 variables. Therefore k is around 40
+#k decided based on the squareroot of data points
+#training dataset has 1642 variables. Therefore k is ~40
 
-#predicts labels with actual labels
 fetal_pred <- knn(fetal_train_norm, fetal_test_norm, fetal_train_labels, k = 40)
 table_KNN <- table(fetal_pred, fetal_test_labels)
 table_KNN <- addmargins(A = table_KNN, FUN = list(Total = sum), quiet = TRUE)
 table_KNN
 
-
+#evaluation metrics
 KNN_cm <-confusionMatrix(fetal_pred, factor(fetal_test$fetal_health))
 KNN_cm
-#KNN_cm <- as.matrix(KNN_cm)
-
-#vars we will need to compute
-
-
-
 summaryStats(KNN_cm)
 ```
 
-```{r decisiontrees}
 
-#Decision Tree Models
-
-#CART model
-library(rpart)
-library(rpart.plot)
-
-#using rpart to run our CART model
-
+### Decision Tree: CART
+```{r CART}
+#normalize data
 fetal_train$fetal_health <- factor(fetal_train$fetal_health)
 fetal_test$fetal_health <- factor(fetal_test$fetal_health)
 
-
+#train CART model
 cart01_fetal_train <- rpart(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train)
-
 rpart.plot(cart01_fetal_train, type = 4, extra = 2)
 
-#to obtain classifications for each record, first we will create a dataframe with the predictor vars of the records we wish to classify
+#prediction on test data
+X_fetal_test_cart <- data.frame(prolongued_decelerations = fetal_test$prolongued_decelerations, abnormal_short_term_variability = fetal_test$abnormal_short_term_variability,percentage_of_time_with_abnormal_long_term_variability = fetal_test$percentage_of_time_with_abnormal_long_term_variability, accelerations = fetal_test$accelerations, histogram_mode = fetal_test$histogram_mode, mean_value_of_long_term_variability = fetal_test$mean_value_of_long_term_variability, histogram_variance = fetal_test$histogram_variance, uterine_contractions = fetal_test$uterine_contractions, fetal_health =fetal_test$fetal_health )
 
-library(caret)
-
-X_fetal_test_cart = data.frame(prolongued_decelerations = fetal_test$prolongued_decelerations, abnormal_short_term_variability = fetal_test$abnormal_short_term_variability,percentage_of_time_with_abnormal_long_term_variability = fetal_test$percentage_of_time_with_abnormal_long_term_variability, accelerations = fetal_test$accelerations, histogram_mode = fetal_test$histogram_mode, mean_value_of_long_term_variability = fetal_test$mean_value_of_long_term_variability, histogram_variance = fetal_test$histogram_variance, uterine_contractions = fetal_test$uterine_contractions, fetal_health =fetal_test$fetal_health )
-
-#predict with test
 fetal_predCart <- predict(object = cart01_fetal_train, newdata = X_fetal_test_cart, type = "class")
 
-#table
+#evaluation metrics
 table_CART <- table(fetal_test$fetal_health, fetal_predCart)
 table_CART <- addmargins(A = table_CART, FUN = list(Total=sum), quiet = TRUE)
 table_CART
@@ -554,25 +348,20 @@ table_CART
 CART_cm <- confusionMatrix(fetal_predCart, fetal_test$fetal_health)
 CART_cm
 
-
 summaryStats(CART_cm)
 ```
 
-
+### Decision Tree: C5
 ```{r c5}
-#C5 Model
-
-
-#running C5 algorithm
-
+#train C5 model
 C5_fetal <- C5.0(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, control = C5.0Control(minCases = 75))
 
 plot(C5_fetal, gp = gpar(fontsize = 8))
 
+#prediction on test data
 fetal_pred_C5 <- predict(object = C5_fetal, newdata = X_fetal_test_cart)
 
-#Table to evaluate model
-
+#evaluation metrics
 table_C5 <- table(fetal_test$fetal_health, fetal_pred_C5 )
 table_C5 <- addmargins(A = table_C5, FUN = list(Total=sum), quiet = TRUE)
 table_C5
@@ -581,47 +370,42 @@ C5_cm <- confusionMatrix(fetal_pred_C5, fetal_test$fetal_health)
 C5_cm
 
 summaryStats(C5_cm)
-
 ```
 
-
+### Random Forest
 ```{r randomforest}
-
-#Random Forest Model
-library(randomForest)
-
+#train random forest model
 random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, ntree = 100, type = "classification")
 
-#predict
-
+#prediction on test data
 fetal_random_pred <- predict(object = random_Fetal, X_fetal_test_cart)
 
+#evaluation metrics
 table_RF <- table(fetal_test$fetal_health, fetal_random_pred)
 table_RF <- addmargins(A = table_RF, FUN = list(Total=sum), quiet = TRUE)
 table_RF
 
 randforest_cm <- confusionMatrix(fetal_random_pred, fetal_test$fetal_health)
+randforest_cm
 
 summaryStats(randforest_cm)
-
 ```
 
 
-
+### Naive Bayes
 ```{r naivebayes}
-#install.packages("e1071")
-library(e1071)
+#normalize data
 cols = c('prolongued_decelerations', 'abnormal_short_term_variability', 'percentage_of_time_with_abnormal_long_term_variability', 'accelerations', 'histogram_mode', 'mean_value_of_long_term_variability', 'histogram_variance', 'uterine_contractions','fetal_health')
 train_fetal_rebal[, cols] <- lapply(train_fetal_rebal[, cols], as.factor)
+
+#train NB model
 nb01 <- naiveBayes(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance + uterine_contractions, data = train_fetal_rebal)
 
-
+#prediction on test data
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 ypred <- predict(object = nb01, newdata = fetal_test)
-t.preds <- table(fetal_test$fetal_health, ypred)
-rownames(t.preds) <- c("Actual: 1", "Actual: 2", "Actual: 3")
-colnames(t.preds) <- c("Predicted: 1", "Predicted: 2", "Predicted: 3   ")
-addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
+
+
 ```
 ##The A‐priori probabilities are the values of p(Y)
 ### p(1) = .715
@@ -629,17 +413,154 @@ addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
 ### p(3) = .15
 
 ```{r nb2}
-#install.packages('caret', dependencies = T)
-library(caret)
+#evaluation metrics
+t.preds <- table(fetal_test$fetal_health, ypred)
+rownames(t.preds) <- c("Actual: 1", "Actual: 2", "Actual: 3")
+colnames(t.preds) <- c("Predicted: 1", "Predicted: 2", "Predicted: 3   ")
+addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
 fetal_test[, cols] <- lapply(fetal_test[, cols], as.factor)
 predictions <- predict(nb01, fetal_test)
 
 nb_cm <- confusionMatrix(predictions, fetal_test[, 'fetal_health'], positive='yes')
+nb_cm
 
 summaryStats(nb_cm)
 ```
 
+####################################################################################################################################
+## Code Appendix
+####################################################################################################################################
 
+### Code Appendix 1: Boxplots and Histograms for each Feature
+
+#### accelerations
+
+```{r accelplots}
+hist(fetal_df$accelerations, 
+     main="Histogram for accelerations", 
+     xlab="accelerations", 
+     border="black", 
+     col="wheat")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+accelerations_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = accelerations))
+accelerations_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Accelerations") + ggtitle("Accelerations Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
+
+#### uterine_contractions
+
+```{r utcontrplots}
+hist(fetal_df$uterine_contractions, 
+     main="Histogram for uterine_contractions", 
+     xlab="uterine_contractions", 
+     border="black", 
+     col="wheat")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+uterine_contractions_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = uterine_contractions))
+uterine_contractions_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Uterine Contractions") + ggtitle("Uterine Contractions Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
+
+
+#### prolongued_decelerations
+
+```{r prldecelplots}
+hist(fetal_df$prolongued_decelerations, 
+     main="Histogram for prolongued_decelerations", 
+     xlab="prolongued_decelerations", 
+     border="black", 
+     col="wheat")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+prolongued_decelerations_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = prolongued_decelerations))
+prolongued_decelerations_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Prolongued Decelerations") + ggtitle("Prolongued Decelerations Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
+
+#### abnormal_short_term_variability
+
+```{r abnvarplots}
+hist(fetal_df$abnormal_short_term_variability, 
+     main="Histogram for abnormal_short_term_variability", 
+     xlab="abnormal_short_term_variability", 
+     border="black", 
+     col="wheat")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+abnormal_short_term_variability_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = abnormal_short_term_variability))
+abnormal_short_term_variability_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Abnormal Short Term Variability") + ggtitle("Abnormal Short Term Variability Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
+
+#### percentage_of_time_with_abnormal_long_term_variability
+
+```{r pctabvarplots}
+hist(fetal_df$percentage_of_time_with_abnormal_long_term_variability, 
+     main="Histogram for percentage_of_time_with_abnormal_long_term_variability", 
+     xlab="percentage_of_time_with_abnormal_long_term_variability", 
+     border="black", 
+     col="wheat")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+percentage_of_time_with_abnormal_long_term_variability_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = percentage_of_time_with_abnormal_long_term_variability))
+percentage_of_time_with_abnormal_long_term_variability_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("% of Time with Abnormal Long Term Variability") + ggtitle("% of Time with Abnormal Long Term Variability Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
+
+#### mean_value_of_long_term_variability
+
+```{r mnlgvarplots}
+hist(fetal_df$mean_value_of_long_term_variability, 
+     main="Histogram for mean_value_of_long_term_variability", 
+     xlab="mean_value_of_long_term_variability", 
+     border="black", 
+     col="wheat")
+
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+mean_value_of_long_term_variability_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = mean_value_of_long_term_variability))
+mean_value_of_long_term_variability_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Mean Value of Long Term Variability") + ggtitle("Mean Value of Long Term Variability Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
+
+#### histogram_mode
+
+```{r histmdplots}
+hist(fetal_df$histogram_mode, 
+     main="Histogram for histogram_mode", 
+     xlab="histogram_mode", 
+     border="black", 
+     col="wheat")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+histogram_mode_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = histogram_mode))
+histogram_mode_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Histogram Mode") + ggtitle("Histogram Mode Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
+
+#### histogram_variance
+```{r histvarplots}
+hist(fetal_df$histogram_variance, 
+     main="Histogram for histogram_variance", 
+     xlab="histogram_variance", 
+     border="black", 
+     col="wheat")
+
+temp_fetal_df <- fetal_df
+temp_fetal_df$fetal_health <- factor(temp_fetal_df$fetal_health)
+
+histogram_variance_boxplot <- ggplot(data = temp_fetal_df, aes(x = factor(fetal_health), y = histogram_variance))
+histogram_variance_boxplot + geom_boxplot(aes(fill = fetal_health)) + ylab("Histogram Variance") + ggtitle("Histogram Variance Boxplot") + stat_summary(fun=mean, geom = "point", shape = 5, size = 4)
+```
 
 
 
