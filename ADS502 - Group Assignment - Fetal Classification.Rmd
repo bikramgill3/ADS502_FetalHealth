@@ -268,6 +268,7 @@ summaryStats <- function(cm) {
   #number of predictions in a class
   colsums = apply(cm, 2, sum)
   accuracy = sum(diag)/n
+  errer_rate = 1 - accuracy 
   # precision = diag/colsums
   # recall = diag/rowsums
   precision = diag/rowsums
@@ -277,7 +278,7 @@ summaryStats <- function(cm) {
   f0.5 = 1.25*(precision*recall) / ((0.25*precision) + recall)
   fetal.health <- c(1,2,3)
   theRest <- data.frame(fetal.health,precision, recall, f1, f2, f0.5)
-  theRest <- theRest %>% kbl(caption = sprintf("Accuracy: %f", accuracy) ) %>%  kable_classic(full_width = F, html_font = "Cambria")
+  theRest <- theRest %>%  kbl(caption = sprintf("Accuracy: %f \\\\ Error Rate: %f  ", accuracy, errer_rate)) %>% kable_classic(full_width = F, html_font = "Cambria")
   return(theRest)
   
 }
