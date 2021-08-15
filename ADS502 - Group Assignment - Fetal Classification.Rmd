@@ -240,6 +240,21 @@ our.resample1 <- fetal_train[our.resample1, ]
 train_fetal_rebal <- rbind(fetal_train, our.resample1)
 table(train_fetal_rebal$fetal_health)
 
+
+
+#chi square test for homogeneity of proportions
+#first making a table of training count and testing count for each target var
+table5.2 <- as.table(rbind(c(1390, 237, 278), c(329, 56, 26)))
+dimnames(table5.2) <- list(Data.set = c("Training Set", "Test Set"), Status = c("1", "2", "3"))
+Xsq_data <- chisq.test(table5.2)
+#test statistic
+Xsq_data$statistic
+#p-value
+Xsq_data$p.value
+#expected counts
+Xsq_data$expected
+
+
 ```
 
 ####################################################################################################################################
