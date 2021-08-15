@@ -1,7 +1,6 @@
 ---
 title: "ADS502 - Group Assignment - Fetal Classification"
 output: html_document
-output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -18,7 +17,6 @@ library(caret)
 library(tidyverse)
 library(arules)
 library(e1071)
-library(caret)
 library(class)
 library(kableExtra)
 library(C50)
@@ -26,7 +24,6 @@ library(partykit)
 library(nnet)
 library(rpart)
 library(rpart.plot)
-library(caret)
 library(randomForest)
 library(ggcorrplot)
 options(scipen=999)
@@ -96,7 +93,6 @@ histogram_median - 0.205
 uterine_contractions - 0.204
 
 Of these 10 predictors, the second visual below will be used to ensure that the features are not highly correlated to one another, to avoid weighting the model to a particular direction. If variables are found to be highly correlated to each other, the variable with the higher correlation to fetal_health will be retained and the other removed.
-
 
 
 histogram_mode is highly correlated to histogram_mean and histogram_median. The latter two features will be removed. 
@@ -237,6 +233,8 @@ our.resample1 <- sample(x = to.resample1, size = 182, replace = TRUE)
 our.resample1 <- fetal_train[our.resample1, ]
 train_fetal_rebal <- rbind(fetal_train, our.resample1)
 table(train_fetal_rebal$fetal_health)
+
+fetal_train_dim <- dim(train_fetal_rebal)
 ```
 
 ####################################################################################################################################
@@ -303,11 +301,11 @@ summaryStats(logreg_cm)
 data_norm <- function(x) {((x - min(x)) / (max(x) - min(x)))}
 
 #normalize train and test data
-fetal_train_norm <- as.data.frame(lapply(fetal_train[ , c(1:8)], data_norm))
+fetal_train_norm <- as.data.frame(lapply(train_fetal_rebal[ , c(1:8)], data_norm))
 fetal_test_norm <- as.data.frame(lapply(fetal_test[ , c(1:8)], data_norm))
 
 #getting our target variable
-fetal_train_labels <- fetal_train[1:fetal_train_dim[1], 9]
+fetal_train_labels <- train_fetal_rebal[1:fetal_train_dim[1], 9]
 fetal_test_labels <- fetal_test[1:fetal_test_dim[1], 9]
 
 
@@ -329,11 +327,11 @@ summaryStats(KNN_cm)
 ### Decision Tree: CART
 ```{r CART}
 #normalize data
-fetal_train$fetal_health <- factor(fetal_train$fetal_health)
+train_fetal_rebal$fetal_health <- factor(train_fetal_rebal$fetal_health)
 fetal_test$fetal_health <- factor(fetal_test$fetal_health)
 
 #train CART model
-cart01_fetal_train <- rpart(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train)
+cart01_fetal_train <- rpart(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = train_fetal_rebal)
 rpart.plot(cart01_fetal_train, type = 4, extra = 2, cex = 0.6) 
 
 #prediction on test data
@@ -355,7 +353,7 @@ summaryStats(CART_cm)
 ### Decision Tree: C5
 ```{r c5}
 #train C5 model
-C5_fetal <- C5.0(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, control = C5.0Control(minCases = 75))
+C5_fetal <- C5.0(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = train_fetal_rebal, control = C5.0Control(minCases = 75))
 
 plot(C5_fetal, gp = gpar(fontsize = 8))
 
@@ -376,7 +374,7 @@ summaryStats(C5_cm)
 ### Random Forest
 ```{r randomforest}
 #train random forest model
-random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train, ntree = 100, type = "classification")
+random_Fetal <- randomForest(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = train_fetal_rebal, ntree = 100, type = "classification")
 
 #prediction on test data
 fetal_random_pred <- predict(object = random_Fetal, X_fetal_test_cart)
