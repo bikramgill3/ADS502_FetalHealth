@@ -19,11 +19,12 @@ Team Members:
 
 
 
-Name of Your Selected Dataset and Programming Language: Fetal Health Classification in R
+Programming Language: R
 
 Description of Your Selected Dataset (data source, number of variables, size of dataset, etc.): 
 
 Our dataset was obtained from Kaggle. The dataset, named fetal_health.csv, contains 22 columns and 2126 rows.
+
 Variables: 
 Data Column						Definition
 baseline value						Baseline Fetal Heart Rate (FHR)
