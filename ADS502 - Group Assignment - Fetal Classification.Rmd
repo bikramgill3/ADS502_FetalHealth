@@ -29,8 +29,6 @@ library(rpart.plot)
 library(caret)
 library(randomForest)
 library(ggcorrplot)
-
-#seeing if this lets me make a push 
 options(scipen=999)
 ```
 
@@ -295,7 +293,7 @@ summaryStats <- function(cm) {
   f0.5 = 1.25*(precision*recall) / ((0.25*precision) + recall)
   fetal.health <- c(1,2,3)
   theRest <- data.frame(fetal.health,precision, recall, f1, f2, f0.5)
-  theRest <- theRest %>% kbl(caption = sprintf("Accuracy: %f \\\\ Error Rate: %f" , accuracy, error_rate) ) %>%  kable_classic(full_width = F, html_font = "Cambria")
+  theRest <- theRest %>% kbl(caption = sprintf("Accuracy: %f \\\\ Error Rate: %f", accuracy, error_rate) ) %>%  kable_classic(full_width = F, html_font = "Cambria")
   return(theRest)
   
 }
@@ -354,7 +352,7 @@ fetal_test$fetal_health <- factor(fetal_test$fetal_health)
 #train CART model
 cart01_fetal_train <- rpart(formula = fetal_health ~ prolongued_decelerations + abnormal_short_term_variability + percentage_of_time_with_abnormal_long_term_variability + accelerations + histogram_mode + mean_value_of_long_term_variability + histogram_variance +uterine_contractions, data = fetal_train)
 
-rpart.plot(cart01_fetal_train, type = 4, extra = 2, cex = 0.5)
+rpart.plot(cart01_fetal_train, type = 4, extra = 2, cex = 0.6)
 
 #prediction on test data
 X_fetal_test_cart <- data.frame(prolongued_decelerations = fetal_test$prolongued_decelerations, abnormal_short_term_variability = fetal_test$abnormal_short_term_variability,percentage_of_time_with_abnormal_long_term_variability = fetal_test$percentage_of_time_with_abnormal_long_term_variability, accelerations = fetal_test$accelerations, histogram_mode = fetal_test$histogram_mode, mean_value_of_long_term_variability = fetal_test$mean_value_of_long_term_variability, histogram_variance = fetal_test$histogram_variance, uterine_contractions = fetal_test$uterine_contractions, fetal_health =fetal_test$fetal_health )
