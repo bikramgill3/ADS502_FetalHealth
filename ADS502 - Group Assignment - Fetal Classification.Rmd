@@ -1,7 +1,6 @@
 ---
 title: "ADS502 - Group Assignment - Fetal Classification"
 output: html_document
-output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -251,6 +250,9 @@ Xsq_data$statistic
 Xsq_data$p.value
 #expected counts
 Xsq_data$expected
+
+write.csv(fetal_test,"/Users/bikramgill/Documents/GitHub/ADS502/fetal_test.csv")
+
 ```
 
 ####################################################################################################################################
@@ -310,6 +312,8 @@ table(fetal_test$fetal_health, lpred)
 #evalutation metrics
 logreg_cm <- confusionMatrix(lpred, factor(fetal_test$fetal_health))
 summaryStats(logreg_cm)
+
+
 ```
 
 ### K-NN 
