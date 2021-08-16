@@ -55,6 +55,3 @@ fetal_health						Tagged as 1 (Normal), 2 (Suspect) and 3 (Pathological)
 
 Full code for this classification comparison can be found on: https://github.com/bikramgill3/ADS502
 
-
-References: 
-
